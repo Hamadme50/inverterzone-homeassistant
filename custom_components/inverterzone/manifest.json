@@ -1,6 +1,7 @@
 {
   "domain": "inverterzone",
   "name": "inverterzone",
+  "categories": ["energy.solar_batteries"],
   "codeowners": ["@Hamadme50"],
   "config_flow": true,
   "documentation": "https://github.com/Hamadme50/inverterzone-homeassistant",
