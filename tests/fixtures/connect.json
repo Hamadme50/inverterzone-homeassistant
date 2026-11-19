@@ -1,0 +1,13 @@
+{
+  "success": true,
+  "message": "OK",
+  "data": {
+    "token": "tok-123",
+    "tokenType": "Bearer",
+    "expiresAt": "2027-11-19T10:00:00Z",
+    "expiresIn": 31536000,
+    "devices": [
+      {"mac": "A1B2C3D4E5F6", "name": "Home inverter", "model": "6.2KW", "brand": "ANENJI", "online": true}
+    ]
+  }
+}

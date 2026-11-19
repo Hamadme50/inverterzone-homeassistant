@@ -1,0 +1,27 @@
+{
+  "success": true,
+  "message": "OK",
+  "data": {
+    "mac": "A1B2C3D4E5F6",
+    "date": "2026-11-19",
+    "timezone": "Asia/Karachi",
+    "generatedAt": "2026-11-19T15:00:00+05:00",
+    "cacheSeconds": 300,
+    "today": {
+      "solarKwh": 12.3,
+      "solarToBatteryKwh": 4.1,
+      "gridImportKwh": 2.2,
+      "gridToBatteryKwh": 0.5,
+      "gridExportKwh": 0.0,
+      "batteryDischargeKwh": 3.4,
+      "loadKwh": 13.0,
+      "totalSuppliedKwh": 17.9
+    },
+    "ratePerKwh": 60,
+    "compareLabel": "Yesterday",
+    "compare": null,
+    "gridOffMinutes": 185,
+    "peakSolar": {"watts": 4210, "time": "12:35"},
+    "peakLoad": {"watts": 3120, "time": "19:05"}
+  }
+}

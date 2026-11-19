@@ -1,0 +1,7 @@
+{
+  "success": true,
+  "message": "OK",
+  "data": [
+    {"mac": "A1B2C3D4E5F6", "name": "Home inverter", "model": "6.2KW", "brand": "ANENJI", "online": true}
+  ]
+}

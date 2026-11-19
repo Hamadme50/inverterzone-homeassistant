@@ -1,0 +1,210 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Sign in to inverterzone",
+        "description": "Use the email and password of your inverterzone app account. Only a sign-in token is stored, not your password.",
+        "data": {
+          "email": "Email",
+          "password": "Password"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Sign in to inverterzone again",
+        "description": "The sign-in for {email} has expired or the account password changed. Enter the password to continue.",
+        "data": {
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Wrong email or password.",
+      "cannot_connect": "Cannot reach the inverterzone cloud. Try again later.",
+      "no_devices": "This account has no inverters of its own. Add one in the inverterzone app first.",
+      "unknown": "Unexpected error."
+    },
+    "abort": {
+      "already_configured": "This account is already set up.",
+      "reauth_successful": "Signed in again."
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "online": {
+        "name": "Online"
+      },
+      "grid_available": {
+        "name": "Grid available"
+      },
+      "bms_connected": {
+        "name": "BMS connected"
+      }
+    },
+    "sensor": {
+      "solar_power": {
+        "name": "Solar power"
+      },
+      "pv_power": {
+        "name": "PV{input} power"
+      },
+      "pv_voltage": {
+        "name": "PV{input} voltage"
+      },
+      "pv_current": {
+        "name": "PV{input} current"
+      },
+      "load_power": {
+        "name": "Load power"
+      },
+      "load_apparent_power": {
+        "name": "Load apparent power"
+      },
+      "load_voltage": {
+        "name": "Output voltage"
+      },
+      "load_current": {
+        "name": "Load current"
+      },
+      "load_frequency": {
+        "name": "Output frequency"
+      },
+      "load_percent": {
+        "name": "Load"
+      },
+      "battery_voltage": {
+        "name": "Battery voltage"
+      },
+      "battery_power": {
+        "name": "Battery power"
+      },
+      "battery_charge_current": {
+        "name": "Battery charge current"
+      },
+      "battery_discharge_current": {
+        "name": "Battery discharge current"
+      },
+      "battery_status": {
+        "name": "Battery status",
+        "state": {
+          "charging": "Charging",
+          "discharging": "Discharging",
+          "idle": "Idle"
+        }
+      },
+      "grid_voltage": {
+        "name": "Grid voltage"
+      },
+      "grid_frequency": {
+        "name": "Grid frequency"
+      },
+      "grid_power": {
+        "name": "Grid power"
+      },
+      "grid_feed_in_power": {
+        "name": "Grid feed-in power"
+      },
+      "inverter_mode": {
+        "name": "Inverter mode",
+        "state": {
+          "power_on": "Power on",
+          "standby": "Standby",
+          "line": "Line",
+          "battery": "Battery",
+          "fault": "Fault",
+          "power_saving": "Power saving",
+          "shutdown": "Shutdown",
+          "unknown": "Unknown"
+        }
+      },
+      "heat_sink_temperature": {
+        "name": "Heat sink temperature"
+      },
+      "inverter_temperature": {
+        "name": "Inverter temperature"
+      },
+      "bus_voltage": {
+        "name": "Bus voltage"
+      },
+      "charging_stage": {
+        "name": "Charging stage"
+      },
+      "fault": {
+        "name": "Fault"
+      },
+      "bms_soc": {
+        "name": "BMS state of charge"
+      },
+      "bms_charge_voltage": {
+        "name": "BMS charge voltage"
+      },
+      "bms_float_voltage": {
+        "name": "BMS float voltage"
+      },
+      "bms_cutoff_voltage": {
+        "name": "BMS cut-off voltage"
+      },
+      "bms_max_charge_current": {
+        "name": "BMS max charge current"
+      },
+      "bms_max_discharge_current": {
+        "name": "BMS max discharge current"
+      },
+      "reading_time": {
+        "name": "Last reading"
+      },
+      "solar_energy_today": {
+        "name": "Solar energy today"
+      },
+      "solar_to_battery_energy_today": {
+        "name": "Solar to battery today"
+      },
+      "grid_import_energy_today": {
+        "name": "Grid import today"
+      },
+      "grid_to_battery_energy_today": {
+        "name": "Grid to battery today"
+      },
+      "grid_export_energy_today": {
+        "name": "Grid export today"
+      },
+      "battery_discharge_energy_today": {
+        "name": "Battery discharge today"
+      },
+      "battery_charge_energy_today": {
+        "name": "Battery charge today"
+      },
+      "load_energy_today": {
+        "name": "Load energy today"
+      },
+      "total_supplied_energy_today": {
+        "name": "Total supplied today"
+      },
+      "peak_solar_power_today": {
+        "name": "Peak solar power today"
+      },
+      "peak_load_power_today": {
+        "name": "Peak load power today"
+      },
+      "grid_off_today": {
+        "name": "Grid off today"
+      }
+    }
+  },
+  "exceptions": {
+    "auth_failed": {
+      "message": "The inverterzone sign-in is no longer valid. Sign in again."
+    },
+    "device_not_linked": {
+      "message": "Inverter {mac} is no longer on this inverterzone account."
+    },
+    "no_data": {
+      "message": "Inverter {mac} has not sent a reading yet."
+    },
+    "update_failed": {
+      "message": "Could not update inverter {mac}: {error}"
+    },
+    "cannot_connect": {
+      "message": "Cannot reach the inverterzone cloud: {error}"
+    }
+  }
+}

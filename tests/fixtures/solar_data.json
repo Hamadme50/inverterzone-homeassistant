@@ -1,0 +1,54 @@
+{
+  "success": true,
+  "message": "OK",
+  "data": {
+    "mac": "A1B2C3D4E5F6",
+    "deviceName": "Home inverter",
+    "online": true,
+    "readingTime": "2026-11-19T15:00:00+05:00",
+    "lastSeen": "2026-11-19T15:00:00+05:00",
+    "timezone": "Asia/Karachi",
+    "solar": {
+      "watts": 3150,
+      "pv1": {"watts": 2100, "volts": 310.5, "amps": 6.8},
+      "pv2": {"watts": 1050, "volts": 295.0, "amps": 3.6},
+      "pv3": null
+    },
+    "load": {"watts": 1240, "va": 1350, "volts": 230.1, "amps": 5.9, "frequencyHz": 50.0, "percent": 20},
+    "battery": {
+      "volts": 52.4,
+      "percent": 85,
+      "percentSource": "BMS",
+      "chargeAmps": 30.0,
+      "dischargeAmps": 0.0,
+      "watts": 1572,
+      "status": "CHARGING",
+      "ratedVolts": 48
+    },
+    "grid": {"available": false, "volts": 0.0, "frequencyHz": 0.0, "watts": 0, "feedInWatts": null},
+    "inverter": {
+      "modeCode": "B",
+      "mode": "Battery",
+      "temperatureC": 41,
+      "inverterTemperatureC": null,
+      "busVolts": 380.0,
+      "chargingStage": "Bulk",
+      "outputPriority": "SBU",
+      "chargerPriority": "Solar first",
+      "ratedWatts": 6200,
+      "fault": null
+    },
+    "bms": {
+      "connected": true,
+      "soc": 85,
+      "chargeVolts": 56.0,
+      "floatVolts": 54.0,
+      "cutoffVolts": 46.0,
+      "maxChargeAmps": 100,
+      "maxDischargeAmps": 120,
+      "stopCharge": false,
+      "stopDischarge": false,
+      "forceCharge": false
+    }
+  }
+}
