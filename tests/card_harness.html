@@ -3,7 +3,8 @@
   Renders the inverterzone dashboard cards with a fake `hass`, for checking them in a browser.
   Serve the repo root over HTTP (e.g. `python -m http.server 8765`) and open:
     http://localhost:8765/tests/card_harness.html?theme=dark&scenario=charging
-  theme: dark | light      scenario: charging | discharging | gridoff | offline
+  theme: dark | light      scenario: charging | discharging | gridoff | offline | import
+  view=panel shows the sidebar page (add narrow=1 for a phone, tab=stats, devices=2)
 -->
 <html lang="en">
 <head>
@@ -72,12 +73,21 @@
 
     const entities = {};
     const states = {};
+    const devices = { dev1: { id: "dev1", name: "Home inverter" } };
     const now = new Date().toISOString();
-    for (const [key, value] of Object.entries(values)) {
-      const id = `${binary.has(key) ? "binary_sensor" : "sensor"}.home_inverter_${key}`;
-      entities[id] = { entity_id: id, platform: "inverterzone", device_id: "dev1", translation_key: key };
-      const state = offline && liveKeys.has(key) && !binary.has(key) ? "unavailable" : String(value);
-      states[id] = { entity_id: id, state, attributes: attrs[key] || {}, last_updated: now, last_changed: now };
+    const addDevice = (deviceId, slug, scale) => {
+      for (const [key, value] of Object.entries(values)) {
+        const id = `${binary.has(key) ? "binary_sensor" : "sensor"}.${slug}_${key}`;
+        entities[id] = { entity_id: id, platform: "inverterzone", device_id: deviceId, translation_key: key };
+        const scaled = typeof value === "number" ? Math.round(value * scale * 10) / 10 : value;
+        const state = offline && liveKeys.has(key) && !binary.has(key) ? "unavailable" : String(scaled);
+        states[id] = { entity_id: id, state, attributes: attrs[key] || {}, last_updated: now, last_changed: now };
+      }
+    };
+    addDevice("dev1", "home_inverter", 1);
+    if (q.get("devices") === "2") {
+      devices.dev2 = { id: "dev2", name: "Shop inverter" };
+      addDevice("dev2", "shop_inverter", 0.5);
     }
 
     // Fake history: a sunny hour with the load stepping around.
@@ -103,19 +113,34 @@
       themes: { darkMode: dark },
       locale: { language: "en" },
       config: { currency: "PKR" },
-      devices: { dev1: { id: "dev1", name: "Home inverter" } },
+      devices,
       entities,
       states,
       formatEntityState: (s) => s.state.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase()),
       callWS: async (msg) => history(msg.entity_ids, Date.parse(msg.start_time), Date.parse(msg.end_time)),
     };
 
-    for (const [where, type] of [["flow", "inverterzone-flow-card"], ["stats", "inverterzone-stats-card"]]) {
-      await customElements.whenDefined(type);
-      const card = document.createElement(type);
-      card.setConfig({ type: `custom:${type}` });
-      document.getElementById(where).appendChild(card);
-      card.hass = hass;
+    if (q.get("view") === "panel") {
+      // The sidebar page, as Home Assistant shows it (narrow=1 for a phone).
+      document.body.innerHTML = "";
+      document.body.style.cssText = `padding:0;display:block;--primary-background-color:${dark ? "#111111" : "#fafafa"};`
+        + `--primary-text-color:${dark ? "#e1e1e1" : "#212121"};--app-header-background-color:${dark ? "#101e24" : "#03a9f4"};`;
+      await customElements.whenDefined("inverterzone-panel");
+      const panel = document.createElement("inverterzone-panel");
+      panel.narrow = q.get("narrow") === "1";
+      // Headless browsers keep a minimum window width; width=390 checks a real phone width.
+      if (q.get("width")) panel.style.width = `${Number(q.get("width"))}px`;
+      document.body.appendChild(panel);
+      panel.hass = hass;
+      if (q.get("tab") === "stats") panel.shadowRoot.querySelector('[data-tab="stats"]').click();
+    } else {
+      for (const [where, type] of [["flow", "inverterzone-flow-card"], ["stats", "inverterzone-stats-card"]]) {
+        await customElements.whenDefined(type);
+        const card = document.createElement(type);
+        card.setConfig({ type: `custom:${type}` });
+        document.getElementById(where).appendChild(card);
+        card.hass = hass;
+      }
     }
   </script>
 </body>

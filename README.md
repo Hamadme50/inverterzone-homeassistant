@@ -24,6 +24,19 @@ If you change the account password, Home Assistant asks you to sign in again. In
 
 Requires Home Assistant 2026.3 or later.
 
+## The inverterzone page
+
+The easiest way to see your inverter: click **inverterzone** in the Home Assistant sidebar. It appears after you install the integration and restart, with no dashboard to edit.
+
+![The inverterzone page in Home Assistant](docs/panel.png)
+
+- **Realtime:** the app's flow page, with live solar, battery, grid and load every 15 seconds.
+- **Stats:** today's solar score, savings, energy totals compared with yesterday, highlights and a live power chart.
+- On a computer both are shown side by side. On a phone, switch between the **Realtime** and **Stats** tabs, like the app.
+- With several inverters, pick one at the top right.
+
+Don't want it in the sidebar? Long-press the **Home Assistant** title at the top of the sidebar and hide **inverterzone**.
+
 ## What you get
 
 **Live, every 15 seconds.** These are unavailable while the dongle is offline (no report for 3 minutes).
@@ -51,7 +64,7 @@ solar, solar to battery, grid import, grid to battery, grid export, battery char
 
 ## Dashboard cards
 
-The integration includes two cards that look like the inverterzone app. They load automatically. Open a dashboard, choose **Edit → Add card**, and search for **inverterzone**.
+The two parts of the inverterzone page are also cards you can put on any dashboard of your own. They load automatically. Open a dashboard, choose **Edit → Add card**, and search for **inverterzone**.
 
 ![inverterzone flow and stats cards](docs/cards.png)
 
@@ -100,4 +113,4 @@ pip install -r requirements_test.txt
 pytest
 ```
 
-To look at the dashboard cards without Home Assistant, serve the repository (`python -m http.server 8765`) and open `http://localhost:8765/tests/card_harness.html?theme=dark&scenario=charging`. Themes are `dark` and `light`; scenarios are `charging`, `discharging`, `gridoff`, `offline` and `import`.
+To look at the dashboard cards without Home Assistant, serve the repository (`python -m http.server 8765`) and open `http://localhost:8765/tests/card_harness.html?theme=dark&scenario=charging`. Themes are `dark` and `light`; scenarios are `charging`, `discharging`, `gridoff`, `offline` and `import`. Add `view=panel` for the sidebar page, with `narrow=1&width=390` for a phone, `tab=stats` and `devices=2`.

@@ -1,7 +1,7 @@
 {
   "domain": "inverterzone",
   "name": "inverterzone",
-  "after_dependencies": ["frontend", "http"],
+  "after_dependencies": ["frontend", "http", "panel_custom"],
   "categories": ["energy.solar_batteries"],
   "codeowners": ["@Hamadme50"],
   "config_flow": true,
@@ -10,5 +10,5 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/Hamadme50/inverterzone-homeassistant/issues",
   "requirements": [],
-  "version": "1.1.0"
+  "version": "1.2.0"
 }

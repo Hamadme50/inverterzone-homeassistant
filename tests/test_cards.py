@@ -12,27 +12,55 @@ from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClien
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
 
-from custom_components.inverterzone import CARDS_DIR, CARDS_URL
+from custom_components.inverterzone import CARDS_DIR, CARDS_URL, PANEL_URL_PATH
 from custom_components.inverterzone.const import DOMAIN
 
 from .conftest import setup_integration
 
 CARDS_JS = CARDS_DIR / "inverterzone-cards.js"
-MANIFEST_VERSION = "1.1.0"
+MANIFEST_VERSION = "1.2.0"
+CARDS_JS_URL = f"{CARDS_URL}/inverterzone-cards.js?v={MANIFEST_VERSION}"
 
 
-async def test_cards_are_served_and_loaded(hass: HomeAssistant) -> None:
-    """With a web server, the cards' folder is served and the JS is added to every page."""
+async def test_cards_and_sidebar_page(hass: HomeAssistant) -> None:
+    """With a web server: the cards are served and loaded, and the sidebar page is added."""
     hass.http = MagicMock()
     hass.http.async_register_static_paths = AsyncMock()
 
-    with patch("homeassistant.components.frontend.add_extra_js_url") as add_js:
+    with (
+        patch("homeassistant.components.frontend.add_extra_js_url") as add_js,
+        patch("homeassistant.components.panel_custom.async_register_panel") as add_panel,
+    ):
         assert await async_setup_component(hass, DOMAIN, {})
 
     (paths,) = hass.http.async_register_static_paths.call_args.args
     assert paths[0].url_path == CARDS_URL
     assert Path(paths[0].path) == CARDS_DIR
-    add_js.assert_called_once_with(hass, f"{CARDS_URL}/inverterzone-cards.js?v={MANIFEST_VERSION}")
+    add_js.assert_called_once_with(hass, CARDS_JS_URL)
+
+    add_panel.assert_awaited_once()
+    panel = add_panel.call_args.kwargs
+    assert panel["frontend_url_path"] == PANEL_URL_PATH
+    assert panel["webcomponent_name"] == "inverterzone-panel"
+    assert panel["sidebar_title"] == "inverterzone"
+    assert panel["module_url"] == CARDS_JS_URL
+    assert panel["require_admin"] is False
+    assert 'define("inverterzone-panel"' in CARDS_JS.read_text(encoding="utf-8")
+
+
+async def test_sidebar_page_already_registered(hass: HomeAssistant) -> None:
+    """A page left over from an earlier setup does not stop the integration."""
+    hass.http = MagicMock()
+    hass.http.async_register_static_paths = AsyncMock()
+
+    with (
+        patch("homeassistant.components.frontend.add_extra_js_url"),
+        patch(
+            "homeassistant.components.panel_custom.async_register_panel",
+            side_effect=ValueError("Overwriting panel inverterzone"),
+        ),
+    ):
+        assert await async_setup_component(hass, DOMAIN, {})
 
 
 def test_card_images_exist() -> None:

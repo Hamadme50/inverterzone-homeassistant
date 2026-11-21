@@ -836,6 +836,169 @@ class InverterzoneCardEditor extends HTMLElement {
   }
 }
 
+// ======================================================================= sidebar page
+// The "inverterzone" page in Home Assistant's sidebar: both cards, no dashboard editing.
+// Side by side on wide screens; Realtime / Stats tabs (like the app) on phones.
+const PANEL_DEVICE_KEY = "inverterzone-panel-device";
+const PANEL_WIDE_PX = 900;
+
+class InverterzonePanel extends HTMLElement {
+  constructor() {
+    super();
+    this._tab = "realtime";
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    this._update();
+  }
+
+  set narrow(narrow) {
+    this._narrow = narrow;
+    this._update();
+  }
+
+  set panel(panel) {
+    this._panel = panel;
+  }
+
+  set route(route) {
+    this._route = route;
+  }
+
+  connectedCallback() {
+    this._resize = new ResizeObserver(() => this._update());
+    this._resize.observe(this);
+    this._update();
+  }
+
+  disconnectedCallback() {
+    this._resize?.disconnect();
+  }
+
+  _savedDevice() {
+    try {
+      return localStorage.getItem(PANEL_DEVICE_KEY);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  _saveDevice(id) {
+    try {
+      localStorage.setItem(PANEL_DEVICE_KEY, id);
+    } catch (_) {
+      // Private mode or blocked storage: the choice just isn't remembered.
+    }
+  }
+
+  _build() {
+    const root = this.attachShadow({ mode: "open" });
+    root.innerHTML = `
+      <style>
+        :host { display: block; min-height: 100vh; background: var(--primary-background-color, #fafafa);
+                color: var(--primary-text-color, #212121); font-family: var(--ha-font-family-body, Roboto, Arial, sans-serif); }
+        [hidden] { display: none !important; }
+        .toolbar { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 8px; box-sizing: border-box;
+                   height: var(--header-height, 56px); padding: 0 12px;
+                   background: var(--app-header-background-color, var(--primary-color, #03a9f4));
+                   color: var(--app-header-text-color, #fff); border-bottom: var(--app-header-border-bottom, none); }
+        .title { flex: 1; margin-left: 4px; font-size: 20px; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        select { font: inherit; font-size: 14px; max-width: 45%; padding: 6px 8px; border-radius: 8px; color: inherit;
+                 background: rgba(255, 255, 255, .15); border: 1px solid rgba(255, 255, 255, .35); }
+        select option { color: #212121; }
+        .tabs { display: flex; justify-content: center; gap: 8px; padding: 12px 16px 0; }
+        .tabs button { flex: 1; max-width: 220px; padding: 9px 12px; border-radius: 20px; cursor: pointer; font: inherit;
+                       font-size: 14px; font-weight: 600; color: inherit; background: transparent; border: 1px solid rgba(127, 127, 127, .35); }
+        .tabs button.on { color: #fff; background: #00B33C; border-color: transparent; }
+        .content { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 16px; padding: 16px; }
+        .col { width: 100%; max-width: 460px; min-width: 0; }
+        .empty { padding: 48px 16px; text-align: center; opacity: .7; }
+      </style>
+      <div class="toolbar">
+        <span id="menu"></span>
+        <div class="title">inverterzone</div>
+        <select id="device" aria-label="Inverter" hidden></select>
+      </div>
+      <div id="tabs" class="tabs" hidden>
+        <button data-tab="realtime">Realtime</button>
+        <button data-tab="stats">Stats</button>
+      </div>
+      <div id="content" class="content">
+        <div id="col-realtime" class="col"></div>
+        <div id="col-stats" class="col"></div>
+      </div>
+      <div id="empty" class="empty" hidden>No inverterzone inverter found. Add the inverterzone integration first.</div>`;
+
+    // Home Assistant's own menu button: opens the sidebar on phones.
+    this._menu = document.createElement("ha-menu-button");
+    root.getElementById("menu").appendChild(this._menu);
+
+    this._flow = document.createElement("inverterzone-flow-card");
+    this._stats = document.createElement("inverterzone-stats-card");
+    root.getElementById("col-realtime").appendChild(this._flow);
+    root.getElementById("col-stats").appendChild(this._stats);
+
+    root.getElementById("device").addEventListener("change", (ev) => {
+      this._device = ev.target.value;
+      this._saveDevice(this._device);
+      this._update();
+    });
+    root.querySelectorAll(".tabs button").forEach((b) =>
+      b.addEventListener("click", () => {
+        this._tab = b.dataset.tab;
+        this._update();
+      }),
+    );
+  }
+
+  _update() {
+    if (!this._hass) return;
+    if (!this.shadowRoot) this._build();
+    const root = this.shadowRoot;
+    const hass = this._hass;
+
+    this._menu.hass = hass;
+    this._menu.narrow = this._narrow;
+
+    const ids = inverterDevices(hass);
+    root.getElementById("empty").hidden = ids.length > 0;
+    root.getElementById("content").hidden = ids.length === 0;
+    if (!ids.length) {
+      root.getElementById("tabs").hidden = true;
+      return;
+    }
+
+    const saved = this._savedDevice();
+    const id = ids.includes(this._device) ? this._device : ids.includes(saved) ? saved : ids[0];
+
+    // Inverter picker, only when there is a choice.
+    const select = root.getElementById("device");
+    select.hidden = ids.length < 2;
+    const optionsKey = ids.map((d) => `${d}=${deviceName(hass, d)}`).join("|");
+    if (optionsKey !== this._optionsKey) {
+      this._optionsKey = optionsKey;
+      select.innerHTML = ids.map((d) => `<option value="${esc(d)}">${esc(deviceName(hass, d))}</option>`).join("");
+    }
+    select.value = id;
+
+    if (id !== this._configured) {
+      this._configured = id;
+      this._flow.setConfig({ type: "custom:inverterzone-flow-card", device_id: id });
+      this._stats.setConfig({ type: "custom:inverterzone-stats-card", device_id: id });
+    }
+    this._flow.hass = hass;
+    this._stats.hass = hass;
+
+    // Side by side when there is room, otherwise app-style tabs.
+    const tabs = Boolean(this._narrow) || (this.clientWidth > 0 && this.clientWidth < PANEL_WIDE_PX);
+    root.getElementById("tabs").hidden = !tabs;
+    root.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === this._tab));
+    root.getElementById("col-realtime").hidden = tabs && this._tab !== "realtime";
+    root.getElementById("col-stats").hidden = tabs && this._tab !== "stats";
+  }
+}
+
 // ======================================================================= register
 const define = (name, cls) => {
   if (!customElements.get(name)) customElements.define(name, cls);
@@ -843,6 +1006,7 @@ const define = (name, cls) => {
 define("inverterzone-flow-card", InverterzoneFlowCard);
 define("inverterzone-stats-card", InverterzoneStatsCard);
 define("inverterzone-card-editor", InverterzoneCardEditor);
+define("inverterzone-panel", InverterzonePanel);
 
 window.customCards = window.customCards || [];
 for (const card of [

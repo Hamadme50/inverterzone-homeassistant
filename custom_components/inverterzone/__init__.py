@@ -30,6 +30,7 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 # The dashboard cards (inverterzone flow / inverterzone stats) and their images.
 CARDS_URL = "/inverterzone_static"
 CARDS_DIR = Path(__file__).parent / "frontend"
+PANEL_URL_PATH = "inverterzone"
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -38,6 +39,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         # No web server (e.g. a test run): nothing to serve the cards with.
         return True
 
+    from homeassistant.components import panel_custom  # noqa: PLC0415
     from homeassistant.components.frontend import add_extra_js_url  # noqa: PLC0415
     from homeassistant.components.http import StaticPathConfig  # noqa: PLC0415
 
@@ -46,7 +48,24 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         [StaticPathConfig(CARDS_URL, str(CARDS_DIR), cache_headers=True)]
     )
     # The version in the URL makes browsers fetch the new cards after an update.
-    add_extra_js_url(hass, f"{CARDS_URL}/inverterzone-cards.js?v={integration.version}")
+    cards_js = f"{CARDS_URL}/inverterzone-cards.js?v={integration.version}"
+    add_extra_js_url(hass, cards_js)
+
+    # The "inverterzone" page in the sidebar: both cards, without editing a dashboard.
+    try:
+        await panel_custom.async_register_panel(
+            hass,
+            frontend_url_path=PANEL_URL_PATH,
+            webcomponent_name="inverterzone-panel",
+            sidebar_title="inverterzone",
+            sidebar_icon="mdi:solar-power-variant",
+            module_url=cards_js,
+            require_admin=False,
+            config={},
+        )
+    except ValueError:
+        # Already registered (the page stays from an earlier setup).
+        pass
     return True
 
 
