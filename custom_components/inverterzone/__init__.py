@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import config_validation as cv, device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.typing import ConfigType
+from homeassistant.loader import async_get_integration
 
 from .api import InverterZoneApi, InverterZoneAuthError, InverterZoneError
 from .const import CONF_TOKEN, DOMAIN
@@ -21,6 +24,30 @@ from .coordinator import (
 )
 
 PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
+# The dashboard cards (inverterzone flow / inverterzone stats) and their images.
+CARDS_URL = "/inverterzone_static"
+CARDS_DIR = Path(__file__).parent / "frontend"
+
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Serve the dashboard cards and load them in every browser, once per start."""
+    if getattr(hass, "http", None) is None:
+        # No web server (e.g. a test run): nothing to serve the cards with.
+        return True
+
+    from homeassistant.components.frontend import add_extra_js_url  # noqa: PLC0415
+    from homeassistant.components.http import StaticPathConfig  # noqa: PLC0415
+
+    integration = await async_get_integration(hass, DOMAIN)
+    await hass.http.async_register_static_paths(
+        [StaticPathConfig(CARDS_URL, str(CARDS_DIR), cache_headers=True)]
+    )
+    # The version in the URL makes browsers fetch the new cards after an update.
+    add_extra_js_url(hass, f"{CARDS_URL}/inverterzone-cards.js?v={integration.version}")
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: InverterZoneConfigEntry) -> bool:

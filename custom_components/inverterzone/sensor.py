@@ -93,7 +93,8 @@ class InverterZoneSensorDescription(SensorEntityDescription):
     value_fn: Callable[[dict[str, Any]], StateType | datetime]
     exists_fn: Callable[[dict[str, Any]], bool] = _always
     requires_online: bool = True
-    name_placeholders: dict[str, str] | None = None
+    # Extra state attributes; the dashboard cards read these (e.g. yesterday's figure).
+    attrs_fn: Callable[[dict[str, Any]], dict[str, Any]] | None = None
 
 
 def _power(
@@ -153,7 +154,11 @@ def _frequency(key: str, *path: str) -> InverterZoneSensorDescription:
     )
 
 
-def _energy(key: str, field: str) -> InverterZoneSensorDescription:
+def _energy(
+    key: str,
+    field: str,
+    attrs_fn: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
+) -> InverterZoneSensorDescription:
     return InverterZoneSensorDescription(
         key=key,
         translation_key=key,
@@ -163,21 +168,38 @@ def _energy(key: str, field: str) -> InverterZoneSensorDescription:
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         suggested_display_precision=1,
         value_fn=lambda d: _get(d, "today", field),
+        attrs_fn=attrs_fn or (lambda d: {"yesterday_same_time": _get(d, "compare", field)}),
     )
+
+
+def _solar_today_attrs(data: dict[str, Any]) -> dict[str, Any]:
+    """Yesterday's figure plus what the stats card needs for "Saved" and its comparison label."""
+    return {
+        "yesterday_same_time": _get(data, "compare", "solarKwh"),
+        "compare_label": _get(data, "compareLabel"),
+        "rate_per_kwh": _get(data, "ratePerKwh"),
+    }
+
+
+def _battery_charge_attrs(data: dict[str, Any]) -> dict[str, Any]:
+    parts = [
+        _get(data, "compare", "solarToBatteryKwh"),
+        _get(data, "compare", "gridToBatteryKwh"),
+    ]
+    known = [p for p in parts if p is not None]
+    return {"yesterday_same_time": round(sum(known), 1) if known else None}
 
 
 def _pv_inputs() -> list[InverterZoneSensorDescription]:
     out: list[InverterZoneSensorDescription] = []
+    # Each input has its own translation key (pv1_power, pv2_voltage...) so the dashboard
+    # cards can tell the inputs apart.
     for i in (1, 2, 3):
         pv = f"pv{i}"
-        placeholders = {"input": str(i)}
         out += [
-            _power(f"{pv}_power", "solar", pv, "watts", translation_key="pv_power",
-                   exists_fn=_has("solar", pv), name_placeholders=placeholders),
-            _voltage(f"{pv}_voltage", "solar", pv, "volts", translation_key="pv_voltage",
-                     exists_fn=_has("solar", pv), name_placeholders=placeholders),
-            _current(f"{pv}_current", "solar", pv, "amps", translation_key="pv_current",
-                     exists_fn=_has("solar", pv), name_placeholders=placeholders),
+            _power(f"{pv}_power", "solar", pv, "watts", exists_fn=_has("solar", pv)),
+            _voltage(f"{pv}_voltage", "solar", pv, "volts", exists_fn=_has("solar", pv)),
+            _current(f"{pv}_current", "solar", pv, "amps", exists_fn=_has("solar", pv)),
         ]
     return out
 
@@ -209,6 +231,7 @@ LIVE_SENSORS: tuple[InverterZoneSensorDescription, ...] = (
     # Battery
     InverterZoneSensorDescription(
         key="battery",
+        translation_key="battery_level",
         device_class=SensorDeviceClass.BATTERY,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=PERCENTAGE,
@@ -304,7 +327,7 @@ LIVE_SENSORS: tuple[InverterZoneSensorDescription, ...] = (
 )
 
 ENERGY_SENSORS: tuple[InverterZoneSensorDescription, ...] = (
-    _energy("solar_energy_today", "solarKwh"),
+    _energy("solar_energy_today", "solarKwh", _solar_today_attrs),
     _energy("solar_to_battery_energy_today", "solarToBatteryKwh"),
     _energy("grid_import_energy_today", "gridImportKwh"),
     _energy("grid_to_battery_energy_today", "gridToBatteryKwh"),
@@ -318,6 +341,7 @@ ENERGY_SENSORS: tuple[InverterZoneSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         suggested_display_precision=1,
         value_fn=_battery_charge_today,
+        attrs_fn=_battery_charge_attrs,
     ),
     _energy("load_energy_today", "loadKwh"),
     _energy("total_supplied_energy_today", "totalSuppliedKwh"),
@@ -327,6 +351,7 @@ ENERGY_SENSORS: tuple[InverterZoneSensorDescription, ...] = (
         device_class=SensorDeviceClass.POWER,
         native_unit_of_measurement=UnitOfPower.WATT,
         value_fn=lambda d: _get(d, "peakSolar", "watts"),
+        attrs_fn=lambda d: {"time": _get(d, "peakSolar", "time")},
     ),
     InverterZoneSensorDescription(
         key="peak_load_power_today",
@@ -334,6 +359,7 @@ ENERGY_SENSORS: tuple[InverterZoneSensorDescription, ...] = (
         device_class=SensorDeviceClass.POWER,
         native_unit_of_measurement=UnitOfPower.WATT,
         value_fn=lambda d: _get(d, "peakLoad", "watts"),
+        attrs_fn=lambda d: {"time": _get(d, "peakLoad", "time")},
     ),
     InverterZoneSensorDescription(
         key="grid_off_today",
@@ -385,8 +411,6 @@ class InverterZoneSensor(InverterZoneEntity, SensorEntity):
     ) -> None:
         """Set up the sensor."""
         super().__init__(coordinator, description)
-        if description.name_placeholders:
-            self._attr_translation_placeholders = description.name_placeholders
 
     @property
     def native_value(self) -> StateType | datetime:
@@ -394,3 +418,12 @@ class InverterZoneSensor(InverterZoneEntity, SensorEntity):
         if self.coordinator.data is None:
             return None
         return self.entity_description.value_fn(self.coordinator.data)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        """Extra figures for the dashboard cards, without empty ones."""
+        attrs_fn = self.entity_description.attrs_fn
+        if attrs_fn is None or self.coordinator.data is None:
+            return None
+        attrs = {k: v for k, v in attrs_fn(self.coordinator.data).items() if v is not None}
+        return attrs or None

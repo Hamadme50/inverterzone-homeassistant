@@ -1,0 +1,122 @@
+<!doctype html>
+<!--
+  Renders the inverterzone dashboard cards with a fake `hass`, for checking them in a browser.
+  Serve the repo root over HTTP (e.g. `python -m http.server 8765`) and open:
+    http://localhost:8765/tests/card_harness.html?theme=dark&scenario=charging
+  theme: dark | light      scenario: charging | discharging | gridoff | offline
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>inverterzone cards harness</title>
+  <style>
+    body { margin: 0; padding: 16px; font-family: Roboto, Arial, sans-serif; display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+    body.dark { background: #111111; color: #e1e1e1; }
+    body.light { background: #fafafa; color: #212121; }
+    .col { width: 440px; }
+    ha-card { display: block; border-radius: 12px; }
+    body.dark ha-card { background: #1c1c1c; }
+    body.light ha-card { background: #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,.12); }
+  </style>
+</head>
+<body>
+  <div class="col" id="flow"></div>
+  <div class="col" id="stats"></div>
+  <script type="module">
+    import "../custom_components/inverterzone/frontend/inverterzone-cards.js?v=harness";
+
+    const q = new URLSearchParams(location.search);
+    const dark = (q.get("theme") || "dark") === "dark";
+    const scenario = q.get("scenario") || "charging";
+    document.body.className = dark ? "dark" : "light";
+
+    const live = {
+      charging:    { solar_power: 3150, pv1_voltage: 310.5, pv1_current: 6.8, pv2_voltage: 295, battery_power: 1572, battery_level: 85, battery_voltage: 52.4,
+                     battery_charge_current: 30, battery_discharge_current: 0, grid_power: 0, grid_voltage: 0, grid_frequency: 0, load_power: 1240,
+                     load_percent: 20, load_current: 5.9, inverter_mode: "battery", charging_stage: "Bulk", grid_available: "off" },
+      discharging: { solar_power: 0, pv1_voltage: 0, pv1_current: 0, battery_power: -980, battery_level: 62, battery_voltage: 50.1,
+                     battery_charge_current: 0, battery_discharge_current: 19.6, grid_power: 0, grid_voltage: 0, grid_frequency: 0, load_power: 930,
+                     load_percent: 15, load_current: 4.2, inverter_mode: "battery", charging_stage: "unknown", grid_available: "off" },
+      gridoff:     { solar_power: 1200, pv1_voltage: 280, pv1_current: 4.3, battery_power: 0, battery_level: 100, battery_voltage: 54,
+                     battery_charge_current: 0, battery_discharge_current: 0, grid_power: 0, grid_voltage: 0, grid_frequency: 0, load_power: 1200,
+                     load_percent: 19, load_current: 5.2, inverter_mode: "battery", charging_stage: "Float", grid_available: "off" },
+      import:      { solar_power: 400, pv1_voltage: 250, pv1_current: 1.6, battery_power: 600, battery_level: 40, battery_voltage: 51,
+                     battery_charge_current: 11.8, battery_discharge_current: 0, grid_power: 2100, grid_voltage: 229.5, grid_frequency: 50, load_power: 1900,
+                     load_percent: 31, load_current: 8.3, inverter_mode: "line", charging_stage: "Bulk", grid_available: "on" },
+    };
+    const base = live[scenario] || live.charging;
+    const values = {
+      ...base,
+      heat_sink_temperature: 41, inverter_temperature: 45, online: scenario === "offline" ? "off" : "on",
+      bms_connected: "on", reading_time: new Date(Date.now() - 4 * 60000).toISOString(),
+      peak_solar_power_today: 4210, peak_load_power_today: 3120, solar_energy_today: 12.3, load_energy_today: 13.0,
+      grid_import_energy_today: 2.2, grid_export_energy_today: scenario === "import" ? 0.8 : 0, battery_discharge_energy_today: 3.4,
+      solar_to_battery_energy_today: 4.1, grid_to_battery_energy_today: 0.5, total_supplied_energy_today: 17.9, grid_off_today: 185,
+    };
+    const attrs = {
+      solar_energy_today: { yesterday_same_time: 10.1, compare_label: "Yesterday", rate_per_kwh: 60 },
+      load_energy_today: { yesterday_same_time: 13.2 },
+      grid_import_energy_today: { yesterday_same_time: 3.6 },
+      grid_export_energy_today: { yesterday_same_time: 0.5 },
+      battery_discharge_energy_today: { yesterday_same_time: 3.3 },
+      solar_to_battery_energy_today: { yesterday_same_time: 3.2 },
+      grid_to_battery_energy_today: { yesterday_same_time: 0.9 },
+      total_supplied_energy_today: { yesterday_same_time: 17.0 },
+      peak_solar_power_today: { time: "12:35" },
+      peak_load_power_today: { time: "19:05" },
+    };
+    const binary = new Set(["online", "grid_available", "bms_connected"]);
+    const liveKeys = new Set(Object.keys(base).concat(["heat_sink_temperature", "inverter_temperature"]));
+    const offline = scenario === "offline";
+
+    const entities = {};
+    const states = {};
+    const now = new Date().toISOString();
+    for (const [key, value] of Object.entries(values)) {
+      const id = `${binary.has(key) ? "binary_sensor" : "sensor"}.home_inverter_${key}`;
+      entities[id] = { entity_id: id, platform: "inverterzone", device_id: "dev1", translation_key: key };
+      const state = offline && liveKeys.has(key) && !binary.has(key) ? "unavailable" : String(value);
+      states[id] = { entity_id: id, state, attributes: attrs[key] || {}, last_updated: now, last_changed: now };
+    }
+
+    // Fake history: a sunny hour with the load stepping around.
+    const history = (ids, start, end) => {
+      const out = {};
+      for (const id of ids) {
+        const pts = [];
+        for (let t = start; t <= end; t += 15000 * 8) {
+          const f = (t - start) / (end - start);
+          let v = 0;
+          if (id.endsWith("solar_power")) v = 2600 + 900 * Math.sin(f * 6);
+          if (id.endsWith("load_power")) v = 1100 + 500 * Math.sin(f * 17) + (f > 0.6 ? 900 : 0);
+          if (id.endsWith("battery_power")) v = 1300 - 1800 * f;
+          if (id.endsWith("grid_power")) v = f > 0.8 ? 700 : 0;
+          pts.push({ s: String(Math.round(v)), lu: t / 1000 });
+        }
+        out[id] = pts;
+      }
+      return out;
+    };
+
+    const hass = {
+      themes: { darkMode: dark },
+      locale: { language: "en" },
+      config: { currency: "PKR" },
+      devices: { dev1: { id: "dev1", name: "Home inverter" } },
+      entities,
+      states,
+      formatEntityState: (s) => s.state.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase()),
+      callWS: async (msg) => history(msg.entity_ids, Date.parse(msg.start_time), Date.parse(msg.end_time)),
+    };
+
+    for (const [where, type] of [["flow", "inverterzone-flow-card"], ["stats", "inverterzone-stats-card"]]) {
+      await customElements.whenDefined(type);
+      const card = document.createElement(type);
+      card.setConfig({ type: `custom:${type}` });
+      document.getElementById(where).appendChild(card);
+      card.hass = hass;
+    }
+  </script>
+</body>
+</html>

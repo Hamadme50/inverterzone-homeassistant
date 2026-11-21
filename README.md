@@ -49,6 +49,33 @@ solar, solar to battery, grid import, grid to battery, grid export, battery char
 - *Solar production*: **Solar energy today**
 - *Home battery storage*: in **Battery charge today**, out **Battery discharge today**
 
+## Dashboard cards
+
+The integration includes two cards that look like the inverterzone app. They load automatically. Open a dashboard, choose **Edit → Add card**, and search for **inverterzone**.
+
+![inverterzone flow and stats cards](docs/cards.png)
+
+- **inverterzone flow:** the app's realtime flow page.
+  - Animated wires between solar, inverter, battery, grid and load, with live values every 15 seconds.
+  - Temperature and inverter mode, today's peaks and today's totals.
+  - Tap any device to open its details.
+- **inverterzone stats:** the app's stats page for today.
+  - The share of the home's power that came from solar and battery, money saved and CO2 avoided.
+  - Every energy total compared with yesterday at the same time, plus today's peaks and grid-off time.
+  - A live power chart for the last 1, 2, 4 or 6 hours.
+
+```yaml
+type: custom:inverterzone-flow-card
+device_id: 1234abcd   # optional; the first inverter is used without it
+```
+
+```yaml
+type: custom:inverterzone-stats-card
+device_id: 1234abcd   # optional
+```
+
+With several inverters, pick one in the card editor. After updating the integration, reload the browser page once to get the new cards.
+
 ## Privacy
 
 Data comes from the inverterzone cloud (`https://inverterzone.com/api/home`). Diagnostics downloads redact the token and email. Removing the integration deletes the stored token; to revoke every token, change the account password in the inverterzone app.
@@ -72,3 +99,5 @@ Send the token as `Authorization: Bearer <token>`. Error codes: `INVALID_CREDENT
 pip install -r requirements_test.txt
 pytest
 ```
+
+To look at the dashboard cards without Home Assistant, serve the repository (`python -m http.server 8765`) and open `http://localhost:8765/tests/card_harness.html?theme=dark&scenario=charging`. Themes are `dark` and `light`; scenarios are `charging`, `discharging`, `gridoff`, `offline` and `import`.

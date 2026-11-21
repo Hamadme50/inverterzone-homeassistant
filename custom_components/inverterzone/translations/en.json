@@ -44,14 +44,32 @@
       "solar_power": {
         "name": "Solar power"
       },
-      "pv_power": {
-        "name": "PV{input} power"
+      "pv1_power": {
+        "name": "PV1 power"
       },
-      "pv_voltage": {
-        "name": "PV{input} voltage"
+      "pv1_voltage": {
+        "name": "PV1 voltage"
       },
-      "pv_current": {
-        "name": "PV{input} current"
+      "pv1_current": {
+        "name": "PV1 current"
+      },
+      "pv2_power": {
+        "name": "PV2 power"
+      },
+      "pv2_voltage": {
+        "name": "PV2 voltage"
+      },
+      "pv2_current": {
+        "name": "PV2 current"
+      },
+      "pv3_power": {
+        "name": "PV3 power"
+      },
+      "pv3_voltage": {
+        "name": "PV3 voltage"
+      },
+      "pv3_current": {
+        "name": "PV3 current"
       },
       "load_power": {
         "name": "Load power"
@@ -70,6 +88,9 @@
       },
       "load_percent": {
         "name": "Load"
+      },
+      "battery_level": {
+        "name": "Battery"
       },
       "battery_voltage": {
         "name": "Battery voltage"

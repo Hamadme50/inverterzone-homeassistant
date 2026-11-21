@@ -19,9 +19,24 @@
     },
     "ratePerKwh": 60,
     "compareLabel": "Yesterday",
-    "compare": null,
+    "compare": {
+      "solarKwh": 10.1,
+      "solarToBatteryKwh": 3.2,
+      "gridImportKwh": 3.6,
+      "gridToBatteryKwh": 0.9,
+      "gridExportKwh": 0.0,
+      "batteryDischargeKwh": 3.3,
+      "loadKwh": 13.2,
+      "totalSuppliedKwh": 17.0
+    },
     "gridOffMinutes": 185,
-    "peakSolar": {"watts": 4210, "time": "12:35"},
-    "peakLoad": {"watts": 3120, "time": "19:05"}
+    "peakSolar": {
+      "watts": 4210,
+      "time": "12:35"
+    },
+    "peakLoad": {
+      "watts": 3120,
+      "time": "19:05"
+    }
   }
 }
